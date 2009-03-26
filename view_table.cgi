@@ -4,7 +4,7 @@
 
 require './virtualmin-oracle-lib.pl';
 if ($config{'charset'}) {
-	$force_charset = $config{'charset'};
+	$main::force_charset = $config{'charset'};
 	}
 if ($ENV{'CONTENT_TYPE'} !~ /boundary=/) {
 	&ReadParse();
