@@ -24,7 +24,7 @@ if ($config{'remote'}) {
 	}
 if ($config{'host'}) {
 	# Connecting to a remote host, so we don't need a lot of these checks
-	gethostbyname($config{'host'}) ||
+	&to_ipaddress($config{'host'}) ||
 		&text('check_ehost', "<tt>$config{'host'}</tt>");
 	return undef;
 	}
