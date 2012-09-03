@@ -19,6 +19,7 @@ feat_name=Oracle Databases
 feat_echeck=The command $1 needed to create SQLite databases is not installed.
 feat_losing=All Oracle databases owned by this virtual server will be deleted.
 feat_label=Oracle database enabled?
+feat_label2=Oracle database
 feat_clash=An Oracle database called $1 already exists
 
 db_name=Oracle
