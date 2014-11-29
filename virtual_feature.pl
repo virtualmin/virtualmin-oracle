@@ -40,12 +40,13 @@ sub feature_depends
 return undef;
 }
 
-# feature_clash(&domain)
+# feature_clash(&domain, [field])
 # Returns undef if there is no clash for this domain for this feature, or
 # an error message if so
 sub feature_clash
 {
-if (!$_[1] || $_[1] eq 'db') {
+local ($d, $field) = @_;
+if (!$field || $field eq 'db') {
 	local $dbname = &oracle_dbname($_[0]->{'db'});
 	return &oracle_database_exists($dbname) ? 
 		&text('feat_clash', $dbname) : undef;
