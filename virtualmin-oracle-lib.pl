@@ -162,6 +162,7 @@ return { 'titles' => \@titles,
 # Returns the DBI handle for some database
 sub get_dbi_handle
 {
+my ($db) = @_;
 $ENV{'ORACLE_HOME'} = $config{'oracle_home'};
 use DBI;
 my $drh;
