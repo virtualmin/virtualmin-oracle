@@ -1,14 +1,19 @@
 #!/usr/local/bin/perl
 # edit_table.cgi
 # Display the structure of some table
+use strict;
+use warnings;
+our (%text, %in);
+our @type_list;
+our ($tb, $cb); # XXX
 
 require './virtualmin-oracle-lib.pl';
 &ReadParse();
 &can_edit_db($in{'db'}) || &error($text{'dbase_ecannot'});
-$desc = &text('table_header', "<tt>$in{'table'}</tt>", "<tt>$in{'db'}</tt>");
+my $desc = &text('table_header', "<tt>$in{'table'}</tt>", "<tt>$in{'db'}</tt>");
 &ui_print_header($desc, $text{'table_title'}, "");
 
-@desc = &table_structure($in{'db'}, $in{'table'});
+my @desc = &table_structure($in{'db'}, $in{'table'});
 print "<form action=edit_field.cgi>\n";
 print "<input type=hidden name=db value='$in{'db'}'>\n";
 print "<input type=hidden name=table value='$in{'table'}'>\n";
@@ -17,8 +22,8 @@ print "<tr $tb> <td><b>$text{'table_field'}</b></td> ",
       "<td><b>$text{'table_type'}</b></td> ",
       "<td><b>$text{'table_null'}</b></td> ",
       "<td><b>$text{'table_key'}</b></td> </tr>\n";
-$i = 0;
-foreach $r (@desc) {
+my $i = 0;
+foreach my $r (@desc) {
 	print "<tr $cb>\n";
 	print "<td><a href='edit_field.cgi?db=$in{'db'}&table=".
 	      &urlize($in{'table'})."&".
@@ -39,7 +44,7 @@ print "<table width=100%><tr>\n";
 # Add field button
 print "<td width=25% nowrap><input type=submit value='$text{'table_add'}'>\n";
 print "<select name=type>\n";
-foreach $t (@type_list) {
+foreach my $t (@type_list) {
 	print "<option>$t\n";
 	}
 print "</select></td></form>\n";
@@ -72,4 +77,3 @@ print "</tr></table>\n";
 
 &ui_print_footer("edit_dbase.cgi?db=$in{'db'}", $text{'dbase_return'},
 	"", $text{'index_return'});
-

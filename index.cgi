@@ -1,11 +1,15 @@
 #!/usr/local/bin/perl
 # Show icons for each Oracle DB
+use strict;
+use warnings;
+our (%text, %config);
+our $module_name;
 
 require './virtualmin-oracle-lib.pl';
 &ui_print_header(undef, $text{'index_title'}, "", undef, 1, 1);
 
 # Check that Oracle is installed
-$err = &check_config();
+my $err = &check_config();
 if ($err) {
 	&ui_print_endpage(&text('index_econfig', $err,
 				"../config.cgi?$module_name"));
@@ -21,12 +25,12 @@ if ($config{'host'}) {
 	}
 else {
 	# Show databases as icons
-	@alldbs = &list_oracle_database_names();
-	@dbs = grep { &can_edit_db($_) } @alldbs;
+	my @alldbs = &list_oracle_database_names();
+	my @dbs = grep { &can_edit_db($_) } @alldbs;
 	if (@dbs) {
-		@links = map { "edit_dbase.cgi?db=".&urlize($_) } @dbs;
-		@icons = map { "images/dbase.gif" } @dbs;
-		@titles = @dbs;
+		my @links = map { "edit_dbase.cgi?db=".&urlize($_) } @dbs;
+		my @icons = map { "images/dbase.gif" } @dbs;
+		my @titles = @dbs;
 		&icons_table(\@links, \@titles, \@icons);
 		}
 	elsif (!@alldbs) {
@@ -38,4 +42,3 @@ else {
 	}
 
 &ui_print_footer("/", $text{'index'});
-

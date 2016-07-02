@@ -1,5 +1,8 @@
 #!/usr/local/bin/perl
 # Show icons for each table
+use strict;
+use warnings;
+our (%text, %in);
 
 require './virtualmin-oracle-lib.pl';
 &ReadParse();
@@ -7,11 +10,11 @@ require './virtualmin-oracle-lib.pl';
 &can_edit_db($in{'db'}) || &error($text{'dbase_ecannot'});
 
 &set_default_db($in{'db'});
-@tables = &list_tables($in{'db'});
+my @tables = &list_tables($in{'db'});
 if (@tables) {
-	@links = map { "edit_table.cgi?db=".&urlize($in{'db'})."&table=".&urlize($_) } @tables;
-	@icons = map { "images/table.gif" } @tables;
-	@titles = @tables;
+	my @links = map { "edit_table.cgi?db=".&urlize($in{'db'})."&table=".&urlize($_) } @tables;
+	my @icons = map { "images/table.gif" } @tables;
+	my @titles = @tables;
 	&icons_table(\@links, \@titles, \@icons);
 	}
 else {
@@ -39,4 +42,3 @@ print &ui_form_end();
 print "</tr></table>\n";
 
 &ui_print_footer("", $text{'index_return'});
-

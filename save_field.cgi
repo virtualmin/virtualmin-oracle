@@ -1,12 +1,16 @@
 #!/usr/local/bin/perl
 # save_field.cgi
 # Create, modify or delete a field
+use strict;
+use warnings;
+our (%text, %in);
 
 require './virtualmin-oracle-lib.pl';
 &ReadParse();
 &can_edit_db($in{'db'}) || &error($text{'dbase_ecannot'});
 &error_setup($text{'field_err'});
 
+my $size;
 if ($in{'delete'}) {
 	# delete this field
 	&execute_sql($in{'db'},
@@ -18,7 +22,7 @@ elsif ($in{'new'}) {
 	$in{'field'} =~ /^\S+$/ || &error(&text('field_efield', $in{'field'}));
 	$in{'null'} && $in{'key'} && &error($text{'field_ekey'});
 	$in{'size'} = $size = &validate_size();
-	$sql = sprintf "alter table %s add %s %s%s %s",
+	my $sql = sprintf "alter table %s add %s %s%s %s",
 		&quotestr($in{'table'}), &quotestr($in{'field'}), $in{'type'},
 		$size, $in{'null'} ? '' : 'not null';
 	&execute_sql($in{'db'}, $sql);
@@ -29,7 +33,7 @@ else {
 	$in{'field'} =~ /^\S+$/ || &error(&text('field_efield', $in{'field'}));
 	$in{'null'} && $in{'key'} && &error($text{'field_ekey'});
 	$in{'size'} = $size = &validate_size();
-	$sql = sprintf "alter table %s modify %s %s%s %s",
+	my $sql = sprintf "alter table %s modify %s %s%s %s",
 			&quotestr($in{'table'}), &quotestr($in{'old'}),
 			$in{'type'}, $size, $in{'null'} ? 'null' : 'not null';
 	&execute_sql($in{'db'}, $sql);
@@ -79,9 +83,10 @@ else {
 	&webmin_log("modify", "field", $in{'field'}, \%in);
 	}
 
+my (@pri, @npri);
 if ($in{'key'} != $in{'oldkey'}) {
 	# Adding or removing a primary key to the table
-	foreach $d (&table_structure($in{'db'}, $in{'table'})) {
+	foreach my $d (&table_structure($in{'db'}, $in{'table'})) {
 		push(@pri, $d->{'field'}) if ($d->{'key'} eq 'PRI');
 		}
 	if ($in{'key'}) {
@@ -118,4 +123,3 @@ else {
 	return "($in{'size'}) $in{'opts'}";
 	}
 }
-

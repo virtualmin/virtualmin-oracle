@@ -1,11 +1,18 @@
 #!/usr/local/bin/perl
 # edit_field.cgi
 # Display a form for editing an existing field or creating a new one
+use strict;
+use warnings;
+our (%text, %in);
+our @type_list;
+our ($tb, $cb); # XXX Ugh.
 
 require './virtualmin-oracle-lib.pl';
 &ReadParse();
 &can_edit_db($in{'db'}) || &error($text{'dbase_ecannot'});
-$desc = &text('field_in', "<tt>$in{'table'}</tt>", "<tt>$in{'db'}</tt>");
+my $desc = &text('field_in', "<tt>$in{'table'}</tt>", "<tt>$in{'db'}</tt>");
+my ($f, $type);
+my @desc;
 if ($in{'type'}) {
 	# Creating a new field
 	&ui_print_header($desc, $text{'field_title1'}, "", "create_field");
@@ -31,6 +38,7 @@ print "<tr> <td><b>$text{'field_name'}</b></td>\n";
 print "<td><input name=field size=20 value='$f->{'field'}'></td> </tr>\n";
 print "<input type=hidden name=old value='$f->{'field'}'>\n" if (!$in{'type'});
 
+my $size;
 if ($type =~ /^(\S+)\((.*)\)(.*)/) {
 	$type = $1;
 	$size = $2;
@@ -44,7 +52,7 @@ if ($in{'type'}) {
 else {
 	# Existing field .. allow type change
 	print "<td><select name=newtype>\n";
-	foreach $t (@type_list) {
+	foreach my $t (@type_list) {
 		printf "<option %s>%s\n",
 			$t eq $type ? "selected" : "", $t;
 		}
@@ -106,4 +114,3 @@ print "</form>\n";
 		 $text{'table_return'},
 		 "edit_dbase.cgi?db=$in{'db'}", $text{'dbase_return'},
 		 "", $text{'index_return'});
-

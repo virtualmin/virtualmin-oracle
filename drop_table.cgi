@@ -1,6 +1,9 @@
 #!/usr/local/bin/perl
 # drop_table.cgi
 # Delete an existing table
+use strict;
+use warnings;
+our (%text, %in);
 
 require './virtualmin-oracle-lib.pl';
 &ReadParse();
@@ -15,10 +18,10 @@ if ($in{'confirm'}) {
 else {
 	# Ask the user if he is sure..
 	&ui_print_header(undef, $text{'tdrop_title'}, "");
-	@tables = &list_tables($in{'db'});
-	$d = &execute_sql($in{'db'},
+	my @tables = &list_tables($in{'db'});
+	my $d = &execute_sql($in{'db'},
 		"select count(*) from ".&quotestr($in{'table'}));
-	$rows = $d->{'data'}->[0]->[0];
+	my $rows = $d->{'data'}->[0]->[0];
 
 	print "<center><b>",&text('tdrop_rusure', "<tt>$in{'table'}</tt>",
 				  "<tt>$in{'db'}</tt>", $rows),"</b><p>\n";
@@ -32,4 +35,3 @@ else {
 		"edit_dbase.cgi?db=$in{'db'}", $text{'dbase_return'},
 		"", $text{'index_return'});
 	}
-

@@ -1,10 +1,16 @@
 #!/usr/local/bin/perl
 # view_table.cgi
 # Display all data in some table
+use strict;
+use warnings;
+our (%text, %in, %config);
+our ($tb, $cb); # XXX
 
 require './virtualmin-oracle-lib.pl';
 if ($config{'charset'}) {
+	no warnings "once";
 	$main::force_charset = $config{'charset'};
+	use warnings "once";
 	}
 if ($ENV{'CONTENT_TYPE'} !~ /boundary=/) {
 	&ReadParse();
@@ -13,8 +19,11 @@ else {
 	&ReadParseMime();
 	}
 &can_edit_db($in{'db'}) || &error($text{'dbase_ecannot'});
-@str = &table_structure($in{'db'}, $in{'table'});
-foreach $s (@str) {
+my @str = &table_structure($in{'db'}, $in{'table'});
+my $keyed;
+my ($search, $searchargs, $searchhids);
+my @adv;
+foreach my $s (@str) {
 	$keyed++ if ($s->{'key'} eq 'PRI');
 	}
 if ($in{'field'}) {
@@ -30,7 +39,7 @@ if ($in{'field'}) {
 	}
 elsif ($in{'advanced'}) {
 	# An advanced search
-	for($i=0; defined($in{"field_$i"}); $i++) {
+	for(my $i=0; defined($in{"field_$i"}); $i++) {
 		if ($in{"field_$i"}) {
 			push(@adv, &quotestr($in{"field_$i"})." ".
 				   &make_like($in{"match_$i"}, $in{"for_$i"}));
@@ -53,6 +62,10 @@ elsif ($in{'advanced'}) {
 	}
 
 # Build where expression
+# XXX This is a big hairy function. Hard to think about.
+my $whereclause;
+my @set;
+my @d;
 if ($search) {
 	$whereclause = "where ( $search ) and rownum >= ".($in{'start'}+1)." and rownum < ".($in{'start'}+$config{'perpage'}+1);
 	}
@@ -62,14 +75,14 @@ else {
 
 if ($in{'delete'}) {
 	# Deleting selected rows
-	$d = &execute_sql($in{'db'}, "select * from ".&quotestr($in{'table'}).
+	my $d = &execute_sql($in{'db'}, "select * from ".&quotestr($in{'table'}).
 			 " ".$whereclause);
-	@t = @{$d->{'titles'}};
-	$count = 0;
-	foreach $r (split(/\0/, $in{'row'})) {
-		local @where;
-		local @r = @{$d->{'data'}->[$r]};
-		for($i=0; $i<@t; $i++) {
+	my @t = @{$d->{'titles'}};
+	my $count = 0;
+	foreach my $r (split(/\0/, $in{'row'})) {
+		my @where;
+		my @r = @{$d->{'data'}->[$r]};
+		for(my $i=0; $i<@t; $i++) {
 			if ($str[$i]->{'key'} eq 'PRI') {
 				if ($r[$i] eq 'NULL') {
 					push(@where,
@@ -94,16 +107,16 @@ if ($in{'delete'}) {
 	}
 elsif ($in{'save'}) {
 	# Update edited rows
-	$d = &execute_sql($in{'db'}, "select * from ".&quotestr($in{'table'}).
+	my $d = &execute_sql($in{'db'}, "select * from ".&quotestr($in{'table'}).
 			  " ".$whereclause);
-	@t = @{$d->{'titles'}};
-	$count = 0;
-	for($j=0; $j<$config{'perpage'}; $j++) {
+	my @t = @{$d->{'titles'}};
+	my $count = 0;
+	for(my $j=0; $j<$config{'perpage'}; $j++) {
 		next if (!defined($in{"${j}_$t[0]"}));
-		local (@where, @set);
-		local @r = @{$d->{'data'}->[$j]};
-		local @params;
-		for($i=0; $i<@t; $i++) {
+		my (@where, @set);
+		my @r = @{$d->{'data'}->[$j]};
+		my @params;
+		for(my $i=0; $i<@t; $i++) {
 			$r[$i] =~ s/'/''/g;
 			if ($str[$i]->{'key'} eq 'PRI') {
 				if ($r[$i] eq 'NULL') {
@@ -115,8 +128,8 @@ elsif ($in{'save'}) {
 					     &quotestr($t[$i])." = '$r[$i]'");
 					}
 				}
-			local $ij = $in{"${j}_$t[$i]"};
-			local $ijdef = $in{"${j}_$t[$i]_def"};
+			my $ij = $in{"${j}_$t[$i]"};
+			my $ijdef = $in{"${j}_$t[$i]_def"};
 			next if ($ijdef || !defined($ij));
 			if (!$config{'blob_mode'} || !&is_blob($str[$i])) {
 				$ij =~ s/\r//g;
@@ -137,7 +150,7 @@ elsif ($in{'save'}) {
 	}
 elsif ($in{'savenew'}) {
 	# Adding a new row
-	for($j=0; $j<@str; $j++) {
+	for(my $j=0; $j<@str; $j++) {
 		if (!$config{'blob_mode'} || !&is_blob($str[$j])) {
 			$in{$j} =~ s/\r//g;
 			}
@@ -154,12 +167,12 @@ elsif ($in{'cancel'} || $in{'new'}) {
 	undef($in{'row'});
 	}
 
-$desc = &text('table_header', "<tt>$in{'table'}</tt>", "<tt>$in{'db'}</tt>");
+my $desc = &text('table_header', "<tt>$in{'table'}</tt>", "<tt>$in{'db'}</tt>");
 &ui_print_header($desc, $text{'view_title'}, "");
 
-$d = &execute_sql($in{'db'},
+my $d = &execute_sql($in{'db'},
 	"select count(*) from ".&quotestr($in{'table'})." $search");
-$total = int($d->{'data'}->[0]->[0]);
+my $total = int($d->{'data'}->[0]->[0]);
 if ($in{'jump'} > 0) {
 	$in{'start'} = int($in{'jump'} / $config{'perpage'}) *
 		       $config{'perpage'};
@@ -228,25 +241,28 @@ print "<input type=hidden name=db value='$in{'db'}'>\n";
 print "<input type=hidden name=table value='$in{'table'}'>\n";
 print "<input type=hidden name=start value='$in{'start'}'>\n";
 print $searchhids;
-$check = !defined($in{'row'}) && !$in{'new'} && $keyed;
+my $check = !defined($in{'row'}) && !$in{'new'} && $keyed;
 if ($total || $in{'new'}) {
 	$d = &execute_sql($in{'db'},
 		"select * from ".&quotestr($in{'table'})." ".$whereclause);
-	@data = @{$d->{'data'}};
+	my @data = @{$d->{'data'}};
 	print "<table border width=100%>\n";
 	print "<tr $tb>\n";
 	print "<td>&nbsp;</td>\n" if ($check);
-	foreach $t (@str) {
+	my $has_blob;
+	foreach my $t (@str) {
 		print "<td><b>$t->{'field'}</b></td>\n";
 		$has_blob++ if (&is_blob($t));
 		}
 	print "</tr>\n";
 
+	my %row;
+	my $nm;
 	map { $row{$_}++ } split(/\0/, $in{'row'});
-	$w = int(100 / scalar(@str));
+	my $w = int(100 / scalar(@str));
 	$w = 10 if ($w < 10);
-	for($i=0; $i<@data; $i++) {
-		local @d = map { $_ eq "NULL" ? undef : $_ } @{$data[$i]};
+	for(my $i=0; $i<@data; $i++) {
+		@d = map { $_ eq "NULL" ? undef : $_ } @{$data[$i]};
 		print "<tr $cb>\n";
 		if ($row{$i} && ($config{'add_mode'} || $has_blob)) {
 			# Show multi-line row editor
@@ -254,8 +270,8 @@ if ($total || $in{'new'}) {
 			print "<table border>\n";
 			print "<tr $tb> <td><b>$text{'view_field'}</b></td> ",
 			      "<td><b>$text{'view_data'}</b></td> </tr>\n";
-			for($j=0; $j<@str; $j++) {
-				local $nm = "${i}_$str[$j]->{'field'}";
+			for(my $j=0; $j<@str; $j++) {
+				my $nm = "${i}_$str[$j]->{'field'}";
 				print "<tr $cb> <td><b>$str[$j]->{'field'}</b></td>\n";
 				$d[$j] = &html_escape($d[$j]);
 				if ($config{'blob_mode'} &&
@@ -274,7 +290,7 @@ if ($total || $in{'new'}) {
 					}
 				elsif ($str[$j]->{'type'} =~ /\((\d+)\)/) {
 					# Show as known-size text
-					local $nw = $1 > 70 ? 70 : $1;
+					my $nw = $1 > 70 ? 70 : $1;
 					print "<td><input name=$nm size=$nw value=\"$d[$j]\"></td>\n";
 					}
 				elsif (&is_blob($str[$j])) {
@@ -292,10 +308,10 @@ if ($total || $in{'new'}) {
 			}
 		elsif ($row{$i}) {
 			# Show simple row-editor
-			for($j=0; $j<@d; $j++) {
+			for(my $j=0; $j<@d; $j++) {
 				$d[$j] = &html_escape($d[$j]);
-				local $l = $d[$j] =~ tr/\n/\n/;
-				local $nm = "${i}_$d->{'titles'}->[$j]";
+				my $l = $d[$j] =~ tr/\n/\n/;
+				$nm = "${i}_$d->{'titles'}->[$j]";
 				if ($config{'blob_mode'} &&
 				    &is_blob($str[$j])) {
 					# Cannot edit this blob
@@ -323,8 +339,8 @@ if ($total || $in{'new'}) {
 			# Show row contents
 			print "<td><input type=checkbox name=row ",
 			      "value=$i></td>\n" if ($check);
-			local $j = 0;
-			foreach $c (@d) {
+			my $j = 0;
+			foreach my $c (@d) {
 				if ($config{'blob_mode'} &&
 				    &is_blob($str[$j]) && $c ne '') {
 					print "<td width=$w%><a href='download.cgi?db=$in{'db'}&table=$in{'table'}&start=$in{'start'}".$searchargs."&row=$i&col=$j'>$text{'view_download'}</a></td>\n";
@@ -343,13 +359,13 @@ if ($total || $in{'new'}) {
 		print "</table> <br> <table border>\n";
 		print "<tr $tb> <td><b>$text{'view_field'}</b></td> ",
 		      "<td><b>$text{'view_data'}</b></td> </tr>\n";
-		for($j=0; $j<@str; $j++) {
+		for(my $j=0; $j<@str; $j++) {
 			print "<tr $cb> <td><b>$str[$j]->{'field'}</b></td>\n";
 			if ($config{'blob_mode'} && &is_blob($str[$j])) {
 				print "<td><input name=$j type=file></td>\n";
 				}
 			elsif ($str[$j]->{'type'} =~ /\((\d+)\)/) {
-				local $nw = $1 > 70 ? 70 : $1;
+				my $nw = $1 > 70 ? 70 : $1;
 				print "<td><input name=$j size=$nw></td>\n";
 				}
 			elsif ($str[$j]->{'type'} =~ /^enum\((.*)\)$/) {
@@ -372,7 +388,7 @@ if ($total || $in{'new'}) {
 	elsif ($in{'new'}) {
 		# Show new fields in a row below table
 		print "<tr $cb>\n";
-		for($j=0; $j<@str; $j++) {
+		for(my $j=0; $j<@str; $j++) {
 			if ($config{'blob_mode'} &&
 			    &is_blob($str[$j])) {
 				# Show as file upload
@@ -436,9 +452,9 @@ if (!$in{'field'} && $total > $config{'perpage'}) {
 	print "<input type=hidden name=search value=1>\n";
 	print &ui_hidden("db", $in{'db'});
 	print &ui_hidden("table", $in{'table'});
-	$sel = &ui_select("field", undef,
+	my $sel = &ui_select("field", undef,
 			[ map { [ $_->{'field'}, $_->{'field'} ] } @str ]);
-	$match = &ui_select("match", 0,
+	my $match = &ui_select("match", 0,
 			[ map { [ $_, $text{'view_match'.$_} ] } (0.. 3) ]);
 	print "<td>",&text('view_search2', "<input name=for size=20>", $sel,
 			   $match);
@@ -469,10 +485,9 @@ if (!$in{'field'} && $total > $config{'perpage'}) {
 # make_like(mode, for)
 sub make_like
 {
-local ($match, $for) = @_;
+my ($match, $for) = @_;
 return $match == 0 ? "like \"%$for%\"" :
        $match == 1 ? "like \"$for\"" :
        $match == 2 ? "not like \"%$for%\"" :
        $match == 3 ? "not like \"$for\"" : " = \"\"";
 }
-

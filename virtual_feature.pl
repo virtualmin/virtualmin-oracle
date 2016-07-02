@@ -1,4 +1,9 @@
 # Defines functions for this feature
+use strict;
+use warnings;
+our (%text);
+our $module_name;
+our $current_theme; # XXX This tightly couples view with model
 
 do 'virtualmin-oracle-lib.pl';
 
@@ -45,10 +50,10 @@ return undef;
 # an error message if so
 sub feature_clash
 {
-local ($d, $field) = @_;
+my ($d, $field) = @_;
 if (!$field || $field eq 'db') {
-	local $dbname = &oracle_dbname($_[0]->{'db'});
-	return &oracle_database_exists($dbname) ? 
+	my $dbname = &oracle_dbname($_[0]->{'db'});
+	return &oracle_database_exists($dbname) ?
 		&text('feat_clash', $dbname) : undef;
 	}
 return undef;
@@ -67,7 +72,7 @@ return !$_[1] && !$_[2];
 sub feature_setup
 {
 # Create the initial DB (if requested)
-local $tmpl = &virtual_server::get_template($_[0]->{'template'});
+my $tmpl = &virtual_server::get_template($_[0]->{'template'});
 if ($tmpl->{'mysql_mkdb'} && !$_[0]->{'no_mysql_db'}) {
 	return &create_oracle_database($_[0], &oracle_dbname($_[0]->{'db'}));
 	}
@@ -99,7 +104,7 @@ foreach my $db (split(/\s+/, $_[0]->{'db_'.$module_name})) {
 # the Webmin user when this feature is enabled
 sub feature_webmin
 {
-local @dbs;
+my @dbs;
 foreach my $d (@{$_[1]}) {
 	if ($d->{$module_name}) {
 		push(@dbs, split(/\s+/, $d->{'db_'.$module_name}));
@@ -120,12 +125,12 @@ else {
 # Returns an array of link objects for webmin modules for this feature
 sub feature_links
 {
-local ($d) = @_;
+my ($d) = @_;
 if ($current_theme eq "virtual-server-theme") {
         # Left side already has databases link, so skip this
         return ( );
         }
-local @dbs = split(/\s+/, $d->{'db_'.$module_name});
+my @dbs = split(/\s+/, $d->{'db_'.$module_name});
 if (@dbs == 1) {
 	return ( { 'mod' => $module_name,
 		   'desc' => $text{'links_link'},
@@ -147,7 +152,7 @@ return $text{'db_name'};
 # Returns a list of databases owned by a domain, according to this plugin
 sub database_list
 {
-local @rv;
+my @rv;
 foreach my $db (split(/\s+/, $_[0]->{'db_'.$module_name})) {
 	push(@rv, { 'name' => $db,
 		    'type' => $module_name,
@@ -163,7 +168,7 @@ return @rv;
 # associated with some domain
 sub databases_all
 {
-local @rv;
+my @rv;
 foreach my $n (&list_oracle_database_names()) {
 	push(@rv, { 'name' => $n,
 		    'type' => $module_name,
@@ -176,7 +181,7 @@ return @rv;
 # Returns 1 if the named database already exists
 sub database_clash
 {
-local $dbname = &oracle_dbname($_[1]);
+my $dbname = &oracle_dbname($_[1]);
 return -r &init_ora_dir()."/init$dbname.ora";
 }
 
@@ -196,17 +201,17 @@ sub database_delete
 &delete_oracle_database($_[0], $_[1]);
 }
 
-# database_size(&domain, dbname) 
+# database_size(&domain, dbname)
 # Returns the on-disk size and number of tables in a database
 sub database_size
 {
-local ($d, $dbname) = @_;
-local $size;
+my ($d, $dbname) = @_;
+my $size;
 foreach my $f (&oracle_database_files($dbname)) {
 	$size += $f->[1];
 	}
-local ($ok, $out) = &execute_oracle_sql($dbname, "select count(*) from all_tables;");
-local $tables;
+my ($ok, $out) = &execute_oracle_sql($dbname, "select count(*) from all_tables;");
+my $tables;
 if ($out =~ /----\n\s*(\d+)/) {
 	$tables = $1;
 	}
@@ -218,9 +223,9 @@ return ($size, $tables);
 # given database.
 sub database_users
 {
-local ($d, $dbname) = @_;
-local ($ok, $out) = &execute_oracle_sql($dbname, "select username,user_id,created from all_users;", $d);
-local @rv;
+my ($d, $dbname) = @_;
+my ($ok, $out) = &execute_oracle_sql($dbname, "select username,user_id,created from all_users;", $d);
+my @rv;
 foreach my $line (split(/\r?\n/, $out)) {
 	if ($line =~ /^\s*(\S+)\s+\d+\s+\d+\-\S+\-\d+/) {
 		push(@rv, [ lc($1), undef ]);
@@ -233,8 +238,8 @@ return @rv;
 # Creates a user with access to the specified databases
 sub database_create_user
 {
-local ($d, $dbnames, $user, $pass) = @_;
-local $orauser = &database_user($user);
+my ($d, $dbnames, $user, $pass) = @_;
+my $orauser = &database_user($user);
 foreach my $dbname (@$dbnames) {
 	&execute_oracle_sql_error($dbname, "create user $orauser identified by \"$pass\";", $d);
 	&execute_oracle_sql_error($dbname, "grant all privileges to $orauser;", $d);
@@ -245,13 +250,13 @@ foreach my $dbname (@$dbnames) {
 # Updates a user, changing his available databases, username and password
 sub database_modify_user
 {
-local ($d, $olddbnames, $dbnames, $olduser, $user, $pass) = @_;
-local $orauser = &database_user($user);
-local $oldorauser = &database_user($olduser);
+my ($d, $olddbnames, $dbnames, $olduser, $user, $pass) = @_;
+my $orauser = &database_user($user);
+my $oldorauser = &database_user($olduser);
 
 # Take away from any old databases
-local %olddbnames = map { $_, 1 } @$olddbnames;
-local %dbnames = map { $_, 1 } @$dbnames;
+my %olddbnames = map { $_, 1 } @$olddbnames;
+my %dbnames = map { $_, 1 } @$dbnames;
 foreach my $dbname (@$olddbnames) {
 	if (!$dbnames{$dbname}) {
 		&execute_oracle_sql($dbname, "drop user $oldorauser;", $d);
@@ -284,8 +289,8 @@ foreach my $dbname (@$dbnames) {
 # Deletes a user and takes away his access to all databases
 sub database_delete_user
 {
-local ($d, $user) = @_;
-local $orauser = &database_user($user);
+my ($d, $user) = @_;
+my $orauser = &database_user($user);
 foreach my $db (&database_list($d)) {
 	&execute_oracle_sql($db->{'name'}, "drop user $orauser;", $d);
 	}
@@ -295,10 +300,9 @@ foreach my $db (&database_list($d)) {
 # Returns a username converted or truncated to be suitable for this database
 sub database_user
 {
-local $rv = $_[0];
+my $rv = $_[0];
 $rv =~ s/[\.\_]//g;
 return $rv;
 }
 
 1;
-

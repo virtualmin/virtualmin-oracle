@@ -1,6 +1,10 @@
 #!/usr/local/bin/perl
 # table_form.cgi
 # Display a form for creating a table
+use strict;
+use warnings;
+our (%text, %in);
+our ($tb, $cb);
 
 require './virtualmin-oracle-lib.pl';
 &ReadParse();
@@ -27,4 +31,3 @@ print "</table></td></tr></table></form>\n";
 
 &ui_print_footer("edit_dbase.cgi?db=$in{'db'}", $text{'dbase_return'},
 	"", $text{'index_return'});
-

@@ -60,9 +60,7 @@ foreach my $r (@{$rv->{'data'}}) {
 
 # All done .. tell the user
 if ($in{'dest'}) {
-	no strict "subs";
-	&close_tempfile(OUT); # XXX Shouldn't this be $fh?
-	use strict "subs";
+	&close_tempfile($fh);
 	my $desc = &text('table_header', "<tt>$in{'table'}</tt>", "<tt>$in{'db'}</tt>");
 	&ui_print_header($desc, $text{'csv_title'}, "", "csv");
 
