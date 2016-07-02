@@ -1,5 +1,8 @@
 #!/usr/local/bin/perl
 # Export the CSV
+use strict;
+use warnings;
+our (%access, %text, %in);
 
 require './virtualmin-oracle-lib.pl';
 &ReadParse();
@@ -16,30 +19,33 @@ if (!$in{'where_def'}) {
 	}
 
 # Execute the SQL
-@cols = split(/\0/, $in{'cols'});
+my @cols = split(/\0/, $in{'cols'});
 @cols || &error($text{'csv_ecols'});
-$cmd = "select ".join(",", @cols)." from ".&quotestr($in{'table'});
+my $cmd = "select ".join(",", @cols)." from ".&quotestr($in{'table'});
 if (!$in{'where_def'}) {
 	$cmd .= " where ".$in{'where'};
 	}
-$rv = &execute_sql($in{'db'}, $cmd);
+my $rv = &execute_sql($in{'db'}, $cmd);
 
 # Open the destination
+my $fh;
 if (!$in{'dest'}) {
 	print "Content-type: text/plain\n\n";
-	$fh = STDOUT;
+	$fh = *STDOUT;
 	}
 elsif ($access{'csv'}) {
 	# Open target file directly
+	no strict "subs";
 	&open_tempfile(OUT, ">$in{'file'}");
 	$fh = OUT;
+	use strict "subs";
 	}
 
 # Send the data
 if ($in{'headers'}) {
 	unshift(@{$rv->{'data'}}, $rv->{'titles'});
 	}
-foreach $r (@{$rv->{'data'}}) {
+foreach my $r (@{$rv->{'data'}}) {
 	if ($in{'format'} == 0) {
 		print $fh join(",", map { "\"".&quote_csv($_, "\"\n")."\"" } @$r);
 		}
@@ -54,11 +60,13 @@ foreach $r (@{$rv->{'data'}}) {
 
 # All done .. tell the user
 if ($in{'dest'}) {
-	&close_tempfile(OUT);
-	$desc = &text('table_header', "<tt>$in{'table'}</tt>", "<tt>$in{'db'}</tt>");
+	no strict "subs";
+	&close_tempfile(OUT); # XXX Shouldn't this be $fh?
+	use strict "subs";
+	my $desc = &text('table_header', "<tt>$in{'table'}</tt>", "<tt>$in{'db'}</tt>");
 	&ui_print_header($desc, $text{'csv_title'}, "", "csv");
 
-	@st = stat($in{'file'});
+	my @st = stat($in{'file'});
 	print &text('csv_done', "<tt>$in{'file'}</tt>",
 				&nice_size($st[7])),"<p>\n";
 
@@ -68,15 +76,14 @@ if ($in{'dest'}) {
 
 sub quote_csv
 {
-local ($str, $q) = @_;
+my ($str, $q) = @_;
 $str =~ s/\r//g;
 foreach my $c (split(//, $q)) {
-	local $qc = $c eq "\"" ? "\\\"" :
-		    $c eq "\n" ? "\\n" :
-		    $c eq "," ? "\\," :
-		    $c eq "\t" ? "\\t" : $c;
+	my $qc = $c eq "\"" ? "\\\"" :
+		$c eq "\n" ? "\\n" :
+		$c eq "," ? "\\," :
+		$c eq "\t" ? "\\t" : $c;
 	$str =~ s/\Q$c\E/$qc/g;
 	}
 return $str;
 }
-

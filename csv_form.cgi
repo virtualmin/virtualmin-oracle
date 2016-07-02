@@ -1,11 +1,14 @@
 #!/usr/local/bin/perl
 # Show a form for exporting CSV data
+use strict;
+use warnings;
+our (%access, %text, %in);
 
 require './virtualmin-oracle-lib.pl';
 &ReadParse();
 &can_edit_db($in{'db'}) || &error($text{'dbase_ecannot'});
 
-$desc = &text('table_header', "<tt>$in{'table'}</tt>", "<tt>$in{'db'}</tt>");
+my $desc = &text('table_header', "<tt>$in{'table'}</tt>", "<tt>$in{'db'}</tt>");
 &ui_print_header($desc, $text{'csv_title'}, "");
 
 print &ui_form_start("csv.cgi/$in{'table'}.csv", "post");
@@ -33,8 +36,8 @@ print &ui_table_row($text{'csv_where'},
 		    &ui_opt_textbox("where", undef, 30, $text{'csv_all'}));
 
 # Columns to select
-@str = &table_structure($in{'db'}, $in{'table'});
-@cols = map { $_->{'field'} } @str;
+my @str = &table_structure($in{'db'}, $in{'table'});
+my @cols = map { $_->{'field'} } @str;
 print &ui_table_row($text{'csv_cols'},
 	    &ui_select("cols", \@cols,
 		       [ map { [ $_->{'field'}, "$_->{'field'} - $_->{'type'}" ] } @str ], 5, 1));
