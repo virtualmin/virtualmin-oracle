@@ -2,5 +2,4 @@ desc=Virtualmin Oracle Databases
 depends=virtual-server/2.608
 category=servers
 version=1.9
-desc_nl=Virtualmin Oracle Databasen
 feedback=jcameron@webmin.com
